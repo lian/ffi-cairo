@@ -1,8 +1,8 @@
-require 'ffi'
+require 'ffi' if Kernel.methods.include?(:require)
 
 module Cairo
   extend FFI::Library
-  ffi_lib 'cairo'
+  ffi_lib ['cairo', '/usr/lib/libcairo.so']
 
   # typedef enum _cairo_format {
     CAIRO_FORMAT_INVALID   = -1
@@ -70,38 +70,46 @@ module Cairo
   # void cairo_show_text (cairo_t *cr, const char *utf8);
   attach_function :cairo_show_text, [:pointer, :string], :void
 
-  # typedef enum cairo_operator_t {
-  Operator = FFI::Enum.new([
-    :CAIRO_OPERATOR_CLEAR, :CAIRO_OPERATOR_SOURCE, :CAIRO_OPERATOR_OVER, :CAIRO_OPERATOR_IN, :CAIRO_OPERATOR_OUT,
-    :CAIRO_OPERATOR_ATOP, :CAIRO_OPERATOR_DEST, :CAIRO_OPERATOR_DEST_OVER, :CAIRO_OPERATOR_DEST_IN, :CAIRO_OPERATOR_DEST_OUT,
-    :CAIRO_OPERATOR_DEST_ATOP, :CAIRO_OPERATOR_XOR, :CAIRO_OPERATOR_ADD, :CAIRO_OPERATOR_SATURATE, :CAIRO_OPERATOR_MULTIPLY,
-    :CAIRO_OPERATOR_SCREEN, :CAIRO_OPERATOR_OVERLAY, :CAIRO_OPERATOR_DARKEN, :CAIRO_OPERATOR_LIGHTEN, :CAIRO_OPERATOR_COLOR_DODGE,
-    :CAIRO_OPERATOR_COLOR_BURN, :CAIRO_OPERATOR_HARD_LIGHT, :CAIRO_OPERATOR_SOFT_LIGHT, :CAIRO_OPERATOR_DIFFERENCE, :CAIRO_OPERATOR_EXCLUSION,
-    :CAIRO_OPERATOR_HSL_HUE, :CAIRO_OPERATOR_HSL_SATURATION, :CAIRO_OPERATOR_HSL_COLOR, :CAIRO_OPERATOR_HSL_LUMINOSITY
-  ])
-  # } cairo_operator_t;
+  if (FFI::Enum rescue false)
+    # typedef enum cairo_operator_t {
+    Operator = FFI::Enum.new([
+      :CAIRO_OPERATOR_CLEAR, :CAIRO_OPERATOR_SOURCE, :CAIRO_OPERATOR_OVER, :CAIRO_OPERATOR_IN, :CAIRO_OPERATOR_OUT,
+      :CAIRO_OPERATOR_ATOP, :CAIRO_OPERATOR_DEST, :CAIRO_OPERATOR_DEST_OVER, :CAIRO_OPERATOR_DEST_IN, :CAIRO_OPERATOR_DEST_OUT,
+      :CAIRO_OPERATOR_DEST_ATOP, :CAIRO_OPERATOR_XOR, :CAIRO_OPERATOR_ADD, :CAIRO_OPERATOR_SATURATE, :CAIRO_OPERATOR_MULTIPLY,
+      :CAIRO_OPERATOR_SCREEN, :CAIRO_OPERATOR_OVERLAY, :CAIRO_OPERATOR_DARKEN, :CAIRO_OPERATOR_LIGHTEN, :CAIRO_OPERATOR_COLOR_DODGE,
+      :CAIRO_OPERATOR_COLOR_BURN, :CAIRO_OPERATOR_HARD_LIGHT, :CAIRO_OPERATOR_SOFT_LIGHT, :CAIRO_OPERATOR_DIFFERENCE, :CAIRO_OPERATOR_EXCLUSION,
+      :CAIRO_OPERATOR_HSL_HUE, :CAIRO_OPERATOR_HSL_SATURATION, :CAIRO_OPERATOR_HSL_COLOR, :CAIRO_OPERATOR_HSL_LUMINOSITY
+    ])
+    # } cairo_operator_t;
 
-  # void                cairo_set_operator                  (cairo_t *cr, cairo_operator_t op);
-  attach_function :cairo_set_operator, [:pointer, Operator], :void
+    # void                cairo_set_operator                  (cairo_t *cr, cairo_operator_t op);
+    attach_function :cairo_set_operator, [:pointer, Operator], :void
+  else # mruby
+    attach_function :cairo_set_operator, [:pointer, :uint], :void
+  end
 
-  # typedef enum _cairo_status {
-  Status = FFI::Enum.new([
-    :SUCCESS, # = 0,
-    :NO_MEMORY, :INVALID_RESTORE, :INVALID_POP_GROUP, :NO_CURRENT_POINT,
-    :INVALID_MATRIX, :INVALID_STATUS, :NULL_POINTER, :INVALID_STRING,
-    :INVALID_PATH_DATA, :READ_ERROR, :WRITE_ERROR, :SURFACE_FINISHED,
-    :SURFACE_TYPE_MISMATCH, :PATTERN_TYPE_MISMATCH, :INVALID_CONTENT,
-    :INVALID_FORMAT, :INVALID_VISUAL, :FILE_NOT_FOUND, :INVALID_DASH,
-    :INVALID_DSC_COMMENT, :INVALID_INDEX, :CLIP_NOT_REPRESENTABLE,
-    :TEMP_FILE_ERROR, :INVALID_STRIDE, :FONT_TYPE_MISMATCH,
-    :USER_FONT_IMMUTABLE, :USER_FONT_ERROR, :NEGATIVE_COUNT,
-    :INVALID_CLUSTERS, :INVALID_SLANT, :INVALID_WEIGHT, :INVALID_SIZE,
-    :USER_FONT_NOT_IMPLEMENTED, :DEVICE_TYPE_MISMATCH, :DEVICE_ERROR,
-    :LAST_STATUS ])
-  # } cairo_status_t;
+  if (FFI::Enum rescue false)
+    # typedef enum _cairo_status {
+    Status = FFI::Enum.new([
+      :SUCCESS, # = 0,
+      :NO_MEMORY, :INVALID_RESTORE, :INVALID_POP_GROUP, :NO_CURRENT_POINT,
+      :INVALID_MATRIX, :INVALID_STATUS, :NULL_POINTER, :INVALID_STRING,
+      :INVALID_PATH_DATA, :READ_ERROR, :WRITE_ERROR, :SURFACE_FINISHED,
+      :SURFACE_TYPE_MISMATCH, :PATTERN_TYPE_MISMATCH, :INVALID_CONTENT,
+      :INVALID_FORMAT, :INVALID_VISUAL, :FILE_NOT_FOUND, :INVALID_DASH,
+      :INVALID_DSC_COMMENT, :INVALID_INDEX, :CLIP_NOT_REPRESENTABLE,
+      :TEMP_FILE_ERROR, :INVALID_STRIDE, :FONT_TYPE_MISMATCH,
+      :USER_FONT_IMMUTABLE, :USER_FONT_ERROR, :NEGATIVE_COUNT,
+      :INVALID_CLUSTERS, :INVALID_SLANT, :INVALID_WEIGHT, :INVALID_SIZE,
+      :USER_FONT_NOT_IMPLEMENTED, :DEVICE_TYPE_MISMATCH, :DEVICE_ERROR,
+      :LAST_STATUS ])
+    # } cairo_status_t;
 
-  # cairo_status_t cairo_surface_write_to_png (cairo_surface_t	*surface, const char *filename);
-  attach_function :cairo_surface_write_to_png, [:pointer, :string], Status
+    # cairo_status_t cairo_surface_write_to_png (cairo_surface_t	*surface, const char *filename);
+    attach_function :cairo_surface_write_to_png, [:pointer, :string], Status
+  else # mruby
+    attach_function :cairo_surface_write_to_png, [:pointer, :string], :uint
+  end
 
   # cairo_surface_t * cairo_image_surface_create_from_png (const char	*filename);
   attach_function :cairo_image_surface_create_from_png, [:string], :pointer
@@ -187,7 +195,11 @@ module Cairo
   attach_function :cairo_set_font_matrix, [:pointer, :pointer], :void
 
   # cairo_status_t cairo_surface_finish (*surface);
-  attach_function :cairo_surface_finish, [:pointer], Status
+  if (FFI::Enum rescue false)
+    attach_function :cairo_surface_finish, [:pointer], Status
+  else # mruby
+    attach_function :cairo_surface_finish, [:pointer], :uint
+  end
 
   # int cairo_format_stride_for_width (cairo_format_t format, int width);
   attach_function :cairo_format_stride_for_width, [:int, :int], :int
@@ -268,9 +280,16 @@ module Cairo
 
     def ctx; @context; end
 
-    ::Cairo.methods.grep(/^cairo_/).each{|m|
-      define_method(m.to_s.gsub(/^cairo_/,'').to_sym, proc{|*a| Cairo.send(m, @context, *a) })
-    }
+    if (Regexp rescue false)
+      ::Cairo.methods.grep(/^cairo_/).each{|m|
+        define_method(m.to_s.gsub(/^cairo_/,'').to_sym, proc{|*a| Cairo.send(m, @context, *a) })
+      }
+    else # mruby
+      ::Cairo.methods.each{|m|
+        next unless m.to_s[0..5] == 'cairo_'
+        define_method(m.to_s[6..-1].to_sym){|*a| p a; Cairo.send(m, @context, *a) }
+      }
+    end
 
     def text_extents(text)
       extents = Cairo::TextExtents.new
@@ -426,11 +445,19 @@ if $0 == __FILE__
   c.font_size = 12
 
   c.move_to(10, 20)
-  c.show_text("host: " + `uname -nmor`.chomp)
+  if (RUBY_VERSION rescue false)
+    c.show_text("host: " + 'uname -nmor'.chomp)
+  else # mruby
+    c.show_text("some text")
+  end
 
   c.font_size = 15.0
   c.move_to(10, 60)
-  c.show_text(`uptime`.chomp)
+  if (RUBY_VERSION rescue false)
+    c.show_text('uptime'.chomp)
+  else # mruby
+    c.show_text("some other text")
+  end
 
   extents = Cairo::TextExtents.new
   Cairo.cairo_text_extents(cr, "A"*10, extents)
@@ -450,5 +477,5 @@ if $0 == __FILE__
   c.to_png("image.png")
   c.destroy
 
-  system("feh image.png")
+  #system("feh image.png")
 end
