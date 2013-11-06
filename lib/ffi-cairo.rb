@@ -70,6 +70,20 @@ module Cairo
   # void cairo_show_text (cairo_t *cr, const char *utf8);
   attach_function :cairo_show_text, [:pointer, :string], :void
 
+  # typedef enum cairo_operator_t {
+  Operator = FFI::Enum.new([
+    :CAIRO_OPERATOR_CLEAR, :CAIRO_OPERATOR_SOURCE, :CAIRO_OPERATOR_OVER, :CAIRO_OPERATOR_IN, :CAIRO_OPERATOR_OUT,
+    :CAIRO_OPERATOR_ATOP, :CAIRO_OPERATOR_DEST, :CAIRO_OPERATOR_DEST_OVER, :CAIRO_OPERATOR_DEST_IN, :CAIRO_OPERATOR_DEST_OUT,
+    :CAIRO_OPERATOR_DEST_ATOP, :CAIRO_OPERATOR_XOR, :CAIRO_OPERATOR_ADD, :CAIRO_OPERATOR_SATURATE, :CAIRO_OPERATOR_MULTIPLY,
+    :CAIRO_OPERATOR_SCREEN, :CAIRO_OPERATOR_OVERLAY, :CAIRO_OPERATOR_DARKEN, :CAIRO_OPERATOR_LIGHTEN, :CAIRO_OPERATOR_COLOR_DODGE,
+    :CAIRO_OPERATOR_COLOR_BURN, :CAIRO_OPERATOR_HARD_LIGHT, :CAIRO_OPERATOR_SOFT_LIGHT, :CAIRO_OPERATOR_DIFFERENCE, :CAIRO_OPERATOR_EXCLUSION,
+    :CAIRO_OPERATOR_HSL_HUE, :CAIRO_OPERATOR_HSL_SATURATION, :CAIRO_OPERATOR_HSL_COLOR, :CAIRO_OPERATOR_HSL_LUMINOSITY
+  ])
+  # } cairo_operator_t;
+
+  # void                cairo_set_operator                  (cairo_t *cr, cairo_operator_t op);
+  attach_function :cairo_set_operator, [:pointer, Operator], :void
+
   # typedef enum _cairo_status {
   Status = FFI::Enum.new([
     :SUCCESS, # = 0,
@@ -172,6 +186,29 @@ module Cairo
   # void cairo_set_font_matrix(cairo_t *cr, cairo_matrix_t *matrix);
   attach_function :cairo_set_font_matrix, [:pointer, :pointer], :void
 
+  # cairo_status_t cairo_surface_finish (*surface);
+  attach_function :cairo_surface_finish, [:pointer], Status
+
+  # int cairo_format_stride_for_width (cairo_format_t format, int width);
+  attach_function :cairo_format_stride_for_width, [:int, :int], :int
+
+  # void cairo_font_extents (cairo_t *cr, cairo_font_extents_t *extents);
+  attach_function :cairo_font_extents, [:pointer, :pointer], :void
+
+  # void cairo_text_extents (cairo_t *cr, const char *utf8, cairo_text_extents_t *extents);
+  attach_function :cairo_text_extents, [:pointer, :string, :pointer], :void
+
+  # typedef struct {
+  class TextExtents < FFI::Struct
+    layout  :x_bearing, :double,
+            :y_bearing, :double,
+            :width,     :double,
+            :height,    :double,
+            :x_advance, :double,
+            :y_advance, :double
+  end
+  # } cairo_text_extents_t;
+
   def self.get_font_matrix(cr)
     mat = FFI::MemoryPointer.new(:double, 6); cairo_get_font_matrix(cr, mat)
     mat.get_array_of_double(0, 6)
@@ -235,6 +272,14 @@ module Cairo
       define_method(m.to_s.gsub(/^cairo_/,'').to_sym, proc{|*a| Cairo.send(m, @context, *a) })
     }
 
+    def text_extents(text)
+      extents = Cairo::TextExtents.new
+      Cairo.cairo_text_extents(@context, text, extents)
+      values = extents.values
+      extents = nil
+      Hash[*[:x_bearing, :y_bearing, :width, :height, :x_advance, :y_advance].zip(values).flatten]
+    end
+
     def font_size=(size)
       Cairo.cairo_set_font_size(@context, size)
     end
@@ -249,8 +294,8 @@ module Cairo
       Cairo.cairo_surface_write_to_png(@surface, filename) if @surface
     end
 
-    def background(r,g,b,w,h)
-      set_source_rgb(r,g,b); move_to(0,0); rectangle(0, 0, w, h); fill
+    def background(r,g,b)
+      Cairo.clear_background(@context, r, g, b)
     end
 
     def background_border(r,g,b,w,h)
@@ -265,44 +310,96 @@ module Cairo
       Cairo.cairo_destroy(@context) if @context
       Cairo.cairo_surface_destroy(@surface) if @surface
     end
+
+    # maybe switch to pango if this is too slow
+    #  * http://stackoverflow.com/questions/10200201/how-to-get-pango-cairo-to-word-wrap-properly
+    def text_to_lines(text, max_width)
+      words, lines = text.split(" "), [ [] ]
+      while next_word = words.shift
+        tmp = (lines.last + [next_word]).join(" ")
+        # word fits
+        if text_extents(tmp)[:width] < max_width
+          lines.last << next_word
+        # word too long for a single line, force split word
+        elsif text_extents(next_word)[:width] > max_width
+          chars, next_word = next_word.scan(/./), ''
+          loop{
+            next_char = chars.shift; break unless next_char
+            tmp = (lines.last + [next_word+next_char]).join(' ')
+            if text_extents(tmp)[:width] < max_width
+              next_word << next_char
+            else
+              words.unshift(chars.unshift(next_char).join)
+              if next_word == ''
+                lines << []
+              else
+                lines.last << next_word
+              end
+              break
+            end
+          }
+        # word to next line
+        else
+          lines << [ next_word ]
+        end
+      end
+      lines.delete_if{|i| i.empty? }
+      lines.map{|i| i.join(" ") }
+    end
   end
 
 end
 
 
 if $0 == __FILE__
-  w,h = 512, 100
+  w,h = 512, 200
   surface = Cairo.cairo_image_surface_create(Cairo::CAIRO_FORMAT_ARGB32, w, h)
 
   cr = Cairo.cairo_create(surface)
-  Cairo.cairo_set_source_rgb(cr, 0, 0, 0)
-  Cairo.cairo_rectangle(cr, 0, 0, w, h)
-  Cairo.cairo_fill(cr)
 
-  #Cairo.cairo_set_source_rgb(cr, 0.5, 0.5, 0.5)
-  #Cairo.cairo_rectangle(cr, 10, 10, w-20, h-20)
-  #Cairo.cairo_fill(cr)
+  c = Cairo::ContextHelper.new(cr, surface)
 
-  Cairo.cairo_set_source_rgb(cr, 0.0, 0.5, 0.0)
-  Cairo.cairo_rectangle(cr, 20, 25, 100, 5)
-  Cairo.cairo_fill(cr)
+  c.set_source_rgb(0.3, 0.1, 0.1)
+  c.rectangle(0, 0, w, h)
+  c.fill
 
-  Cairo.cairo_set_source_rgb(cr, 1, 1, 1)
+  c.set_source_rgb(0.5, 0.5, 0.5)
+  c.rectangle(10, 10, w-20, h-20)
+  c.fill
 
-  Cairo.cairo_select_font_face(cr, "Sans", Cairo::CAIRO_FONT_SLANT_NORMAL, Cairo::CAIRO_FONT_WEIGHT_NORMAL)
+  c.set_source_rgb(0.0, 0.5, 0.0)
+  c.rectangle(20, 25, 100, 5)
+  c.fill
 
-  Cairo.cairo_set_font_size(cr, 12)
-  Cairo.cairo_move_to(cr, 10, 20)
-  Cairo.cairo_show_text(cr, "host: " + `uname -nmor`.chomp)
+  c.set_source_rgb(1, 1, 1)
 
-  Cairo.cairo_set_font_size(cr, 15.0)
-  Cairo.cairo_move_to(cr, 10, 60)
-  Cairo.cairo_show_text(cr, `uptime`.chomp)
+  c.font = "Sans"
+  c.font_size = 12
 
-  p Cairo.cairo_surface_write_to_png(surface, ARGV[0] || "image.png") # write png.
+  c.move_to(10, 20)
+  c.show_text("host: " + `uname -nmor`.chomp)
 
-  Cairo.cairo_destroy(cr)
-  Cairo.cairo_surface_destroy(surface)
+  c.font_size = 15.0
+  c.move_to(10, 60)
+  c.show_text(`uptime`.chomp)
 
-  #system("feh image.png")
+  extents = Cairo::TextExtents.new
+  Cairo.cairo_text_extents(cr, "A"*10, extents)
+  p extents.values
+
+  c.set_source_rgb(0, 0, 1)
+  c.move_to 10, 100
+  c.line_to 100, 140
+  c.stroke
+
+  c.arc(100, 100, 10, 0, 2 * Math::PI)
+  c.stroke
+
+  c.arc(150, 100, 10, 0, 2 * Math::PI)
+  c.fill
+
+  c.to_png("image.png")
+  c.destroy
+
+  system("feh image.png")
 end
