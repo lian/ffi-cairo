@@ -1,6 +1,7 @@
 require 'ffi'
 require 'ffi-cairo.rb'
 
+module Cairo
 module X11
   extend FFI::Library
   ffi_lib 'X11'
@@ -136,56 +137,6 @@ module X11
     alias loop render_loop
   end
 end
-
-module Cairo
-  class DataSurface
-    attr_reader :surface, :cairo, :cairo_helper, :width, :height
-
-    def initialize(w,h, &blk)
-      @width, @height = w, h
-      @callback = blk
-    end
-
-    def resize(w, h); @width, @height = w, h; :repeat; end
-
-    def destroy
-      (Cairo.cairo_surface_destroy(@surface); @surface = nil) if @surface
-      (Cairo.cairo_destroy(@cairo); @cairo = nil) if @cairo
-      @cairo_helper = nil if @cairo_helper
-    end
-
-    def create_surface(width=@width, height=@height)
-      destroy
-      @surface = Cairo.cairo_image_surface_create(Cairo::CAIRO_FORMAT_ARGB32, width, height)
-      @cairo = Cairo.cairo_create(@surface)
-      @cairo_helper = Cairo::ContextHelper.new(@cairo)
-    end
-
-    def data
-      @buf = nil if @buf
-      @buf = Cairo.cairo_image_surface_get_data(@surface)
-    end
-
-    def render
-      loop{
-        create_surface
-        break unless @callback.call(@cairo, @width, @height, @cairo_helper) == :repeat
-      }
-    end
-
-    def draw(cairo_ctx=nil, x=0, y=0)
-      render
-      draw_on_parent_surface(cairo_ctx, x, y)
-    end
-
-    def draw_on_parent_surface(cairo_ctx=nil, x=0, y=0)
-      if cairo_ctx
-        Cairo.cairo_set_source_surface(cairo_ctx, @surface, x, y)
-        Cairo.cairo_paint(cairo_ctx)
-      end
-    end
-    alias redraw draw_on_parent_surface
-  end
 end
 
 
@@ -254,7 +205,7 @@ clock = Cairo::DataSurface.new(150, 150){|cr, w, h, c|
 }
 
 
-win = X11::Window.new('cairo-canvas')
+win = Cairo::X11::Window.new('cairo-canvas')
 
 win.loop(1.0, :debug_time){|cairo|
   #clock.draw(cairo.ctx, 0, 0)
@@ -270,4 +221,4 @@ win.loop(1.0, :debug_time){|cairo|
   }
 }
 
-end # __FILE__ == $0
+end
