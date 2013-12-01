@@ -369,6 +369,7 @@ module Cairo
 
   class DataSurface
     attr_reader :surface, :cairo, :cairo_helper, :width, :height
+    attr_accessor :callback
 
     def initialize(w,h, &blk)
       @width, @height = w, h
@@ -417,5 +418,3 @@ module Cairo
   end
 
 end
-
-

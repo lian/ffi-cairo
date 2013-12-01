@@ -119,4 +119,24 @@ module Cairo
       GL.glDisable(GL::GL_TEXTURE_2D)
     end
   end
+
+  class OpenGL_Surface
+    attr_accessor :callback
+    def initialize(width, height)
+      @texture = OpenGL_Texture.new(width, height){|cr,w,h,c|
+        @callback.call(cr,w,h,c) if @callback
+      }
+    end
+
+    def draw(cairo_parent_ctx=nil, x=0, y=0)
+      render
+      redraw(cairo_parent_ctx, x, y)
+    end
+
+    def surface; @texture; end
+    def render; @texture.recompile; end
+    def redraw(_=nil, x=0, y=0); @texture.draw_at(x, y); end
+    def destroy; @texture.clear!; end
+  end
+
 end
