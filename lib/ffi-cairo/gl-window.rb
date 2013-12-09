@@ -161,12 +161,12 @@ module X11
     attr_reader :win, :context, :width, :height
     attr_accessor :parent
 
-    def initialize(window_name, display_name=nil, visual_settings=nil, _window_type=:normal)
+    def initialize(window_name, display_name=nil, visual_settings=nil, _window_type=:normal, w=600, h=480)
       @dpy  = X11.get_display(display_name)
       @root = X11.RootWindow(@dpy, 0)
 
       create_context
-      create_window(640, 480, window_name, _window_type)
+      create_window(w, h, window_name, _window_type)
       make_current
 
       init_xevents
@@ -245,6 +245,7 @@ module X11
     end
 
     def xprops; `xprop -id #{@win}`; end
+    def xwininfo; `xwininfo -id #{@win}`; end
 
     def map_window!
       (X11::XMapWindow(@dpy, @win); @is_mapped = true) if @dpy && @win
@@ -258,11 +259,15 @@ module X11
       return @window_type unless mode
       @window_type = mode.to_s.upcase
       unmap_window!
-      mode = X11.XInternAtom(@dpy, "_NET_WM_WINDOW_TYPE_" + @window_type, 1)
-      mode_ptr = FFI::MemoryPointer.new(:pointer).put_pointer(0, mode)
-      X11.XChangeProperty(@dpy, @win, X11.XInternAtom(@dpy, "_NET_WM_WINDOW_TYPE", 0),
-                          X11::XA_ATOM, 32, X11::PropModeReplace, mode_ptr, 1)
+      #mode = X11.XInternAtom(@dpy, "_NET_WM_WINDOW_TYPE_" + @window_type, 1)
+      #mode_ptr = FFI::MemoryPointer.new(:pointer).put_pointer(0, mode)
+      #X11.XChangeProperty(@dpy, @win, X11.XInternAtom(@dpy, "_NET_WM_WINDOW_TYPE", 0),
+      #                    X11::XA_ATOM, 32, X11::PropModeReplace, mode_ptr, 1)
       map_window!
+    end
+
+    def window_type_desktop!
+      `xprop -id #{@win} -f _NET_WM_WINDOW_TYPE 32a -set _NET_WM_WINDOW_TYPE _NET_WM_WINDOW_TYPE_DESKTOP`
     end
 
     def close

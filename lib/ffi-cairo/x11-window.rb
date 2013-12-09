@@ -38,10 +38,9 @@ module X11
     attr_reader :win, :context, :width, :height, :running
     attr_accessor :parent
 
-    def initialize(window_name, display_name=nil)
+    def initialize(window_name, display_name=nil, visual_settings=nil, window_type=nil, w=600, h=480)
       @dpy = X11.get_display(display_name)
       @root = X11.RootWindow(@dpy, 0)
-      w, h = 640, 480
       create_window(w, h, window_name)
       create_surface(w, h)
       init_xevents
