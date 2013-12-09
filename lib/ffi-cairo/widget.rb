@@ -76,7 +76,7 @@ module Cairo
     def create_window(name)
       p [:create_window, name, Cairo.render_type]
       klass = case Cairo.render_type
-              when :gl; ::X11::Window
+              when :gl;   Cairo::GL::X11::Window
               when :x11;  Cairo::X11::Window
               else raise "no Cairo.render_type found!"
               end

@@ -1,5 +1,7 @@
 require 'ffi'
 
+module Cairo
+module GL
 module X11
   extend FFI::Library
   ffi_lib 'X11'
@@ -411,11 +413,36 @@ module X11
     end
 
     def step_loop; update; draw(1.0); end
+
+    def render_loop(wait=1.0, show_stat=false, &draw_block)
+      self.update_callback = proc{ step_events(10) }
+      self.draw_callback = proc{
+        setup_perspective
+        GL.clear_color([0.2, 0.2, 0.2, 0.0])
+        draw_block.call(nil)
+        swap_buffers
+      }
+      trap_close
+
+      @running = true
+      while @running
+        t = Time.now
+        step_loop
+        took  = (Time.now - t).to_f
+        delay = wait ? (wait - took) : 0.0; delay=0 if delay < 0.0
+        p [:took, took, :delay, delay] if show_stat
+        sleep(delay) if wait
+      end
+    end
+
   end
 
 end
+end
+end
 
 
+module Cairo
 module GL
   extend FFI::Library
   GL_FALSE = 0
@@ -533,4 +560,5 @@ module GL
     "--------------------------------------------------"].join("\n")
   end
 
+end
 end
