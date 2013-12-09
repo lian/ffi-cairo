@@ -52,17 +52,20 @@ module Cairo
 
     def fire_timers!
       now, run_now = Time.now.to_f, []
-      @timers.each{|name,state|
-        if state[:next_tick] <= now
-          run_now << [name, state[:method]] # queue run
-          state[:next_tick] = now + state[:interval] # enqueue next tick
-        end
+      @timers.each{|name,timers|
+        timers.each{|state|
+          if state[:next_tick] <= now
+            run_now << [name, state[:method]] # queue run
+            state[:next_tick] = now + state[:interval] # enqueue next tick
+          end
+        }
       }
       run_now.each{|name,method| @widgets[name].send(method) }
     end
 
     def add_timer(name, interval, method)
-      @timers[name] = { method: method, interval: interval, next_tick: Time.now.to_f + interval }
+      @timers[name] ||= []
+      @timers[name] << { method: method, interval: interval, next_tick: Time.now.to_f + interval }
     end
   end
 
