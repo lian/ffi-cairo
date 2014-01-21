@@ -89,6 +89,23 @@ module Cairo
   end
 
   if (FFI::Enum rescue false)
+    # typedef enum {
+    Antialias = FFI::Enum.new([
+      :CAIRO_ANTIALIAS_DEFAULT,
+      :CAIRO_ANTIALIAS_NONE, :CAIRO_ANTIALIAS_GRAY, :CAIRO_ANTIALIAS_SUBPIXEL,
+      :CAIRO_ANTIALIAS_FAST, :CAIRO_ANTIALIAS_GOOD, :CAIRO_ANTIALIAS_BEST
+    ])
+    # } cairo_antialias_t;
+
+    # void cairo_set_antialias (cairo_t *cr, cairo_antialias_t antialias);
+    attach_function :cairo_set_antialias, [:pointer, Antialias], :void
+    attach_function :cairo_font_options_set_antialias, [:pointer, Antialias], :void
+  else # mruby
+    attach_function :cairo_set_antialias, [:pointer, :uint], :void
+    attach_function :cairo_font_options_set_antialias, [:pointer, :uint], :void
+  end
+
+  if (FFI::Enum rescue false)
     # typedef enum _cairo_status {
     Status = FFI::Enum.new([
       :SUCCESS, # = 0,
