@@ -73,14 +73,14 @@ module Cairo
   class << self
     attr_accessor :render_type
 
-    def create_window(name, w=600, h=480)
+    def create_window(name, w=600, h=480, x=0, y=0)
       p [:create_window, name, Cairo.render_type, w, h]
       klass = case Cairo.render_type
               when :gl;   Cairo::GL::X11::Window
               when :x11;  Cairo::X11::Window
               else raise "no Cairo.render_type found!"
               end
-      klass.new(name, nil, nil, :normal, w, h)
+      klass.new(name, nil, nil, :normal, w, h, x, y)
     end
   end
 

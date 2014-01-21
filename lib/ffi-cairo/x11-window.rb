@@ -38,18 +38,19 @@ module X11
     attr_reader :win, :context, :width, :height, :running
     attr_accessor :parent
 
-    def initialize(window_name, display_name=nil, visual_settings=nil, window_type=nil, w=600, h=480)
+    def initialize(window_name, display_name=nil, visual_settings=nil, window_type=nil, w=600, h=480, x=0, y=0)
       @dpy = X11.get_display(display_name)
       @root = X11.RootWindow(@dpy, 0)
-      create_window(w, h, window_name)
+      create_window(w, h, x, y, window_name)
       create_surface(w, h)
       init_xevents
     end
 
-    def create_window(width, height, name="glx-window")
+    def create_window(width, height, x, y, name="glx-window")
       @width, @height, @window_name = width, height, name
+      @pos_x, @pos_y = x, y
       set_ratio(@width, @height)
-      @win = X11.XCreateSimpleWindow(@dpy, @root, 0, 0, @width, @height, 0, 0, X11.DefaultBlack(@dpy))
+      @win = X11.XCreateSimpleWindow(@dpy, @root, @pos_x, @pos_y, @width, @height, 0, 0, X11.DefaultBlack(@dpy))
       X11.XMapWindow(@dpy, @win)
       X11.XSelectInput(@dpy, @win, X11::StructureNotifyMask | X11::ExposureMask)
       X11.XStoreName(@dpy, @win, name.to_s)

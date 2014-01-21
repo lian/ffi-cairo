@@ -161,19 +161,20 @@ module X11
     attr_reader :win, :context, :width, :height
     attr_accessor :parent
 
-    def initialize(window_name, display_name=nil, visual_settings=nil, _window_type=:normal, w=600, h=480)
+    def initialize(window_name, display_name=nil, visual_settings=nil, _window_type=:normal, w=600, h=480, x=0, y=0)
       @dpy  = X11.get_display(display_name)
       @root = X11.RootWindow(@dpy, 0)
 
       create_context
-      create_window(w, h, window_name, _window_type)
+      create_window(w, h, x, y, window_name, _window_type)
       make_current
 
       init_xevents
     end
 
-    def create_window(width, height, name="glx-window", type=:normal)
+    def create_window(width, height, pos_x, pos_y, name="glx-window", type=:normal)
       @width, @height, @window_name = width, height, name
+      @pos_x, @pos_y = pos_x, pos_y
       set_ratio(@width, @height)
 
       @swa = X11::XSetWindowAttributes.new
@@ -183,7 +184,7 @@ module X11
                           ButtonMotionMask | StructureNotifyMask | \
                           PointerMotionMask | StructureNotifyMask
 
-      @win = X11.XCreateWindow(@dpy, @root, 0, 0, @width, @height, 0,
+      @win = X11.XCreateWindow(@dpy, @root, @pos_x, @pos_y, @width, @height, 0,
         depth=@visual.get_array_of_uint(0, 6).last, X11::InputOutput,
         @visual, CWBackPixel|CWBackPixmap|CWBorderPixel|CWColormap|CWEventMask, @swa)
 
