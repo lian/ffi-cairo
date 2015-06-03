@@ -392,7 +392,7 @@ module X11
       when 5;   xev_mouse(0);     # ButtonRelease
       when 6;   xev_motion;       # MotionNotify
       when 22;  xev_reshape;
-      #when Expose;
+      when Expose; draw
       end; true
     end
 
@@ -437,7 +437,15 @@ module X11
         took  = (Time.now - t).to_f
         delay = wait ? (wait - took) : 0.0; delay=0 if delay < 0.0
         p [:took, took, :delay, delay] if show_stat
-        sleep(delay) if wait
+        if wait
+          sleep_passed = 0.0
+          loop {
+            sleep(0.05)
+            sleep_passed += 0.05
+            break if sleep_passed >= delay
+            update
+          }
+        end
       end
     end
 
